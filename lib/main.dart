@@ -7,6 +7,8 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'services/api_service.dart';
 import 'models/user_profile.dart';
 import 'models/turn_response.dart';
+import 'models/chat_message.dart';
+import 'providers/chat_provider.dart';
 
 // --- Providers ---
 
@@ -76,6 +78,16 @@ class VoiceSessionNotifier extends StateNotifier<AsyncValue<TurnResponse?>> {
       final response = await _apiService.submitTurn(mockUrl);
       state = AsyncValue.data(response);
       _ref.read(voiceStateProvider.notifier).state = VoiceState.speaking;
+
+      // Add to chat history
+      _ref.read(chatProvider.notifier).addMessage(ChatMessage(
+            id: DateTime.now().toIso8601String(),
+            content: response.text,
+            type: MessageType.text,
+            sender: MessageSender.bot,
+            timestamp: DateTime.now(),
+            actionItems: response.actionItems?.map((e) => e.label).toList(),
+          ));
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);
       _ref.read(voiceStateProvider.notifier).state = VoiceState.idle;
@@ -187,23 +199,26 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.account_balance_rounded, size: 100, color: Colors.white),
+            Hero(
+              tag: 'app_logo',
+              child: const Icon(Icons.account_balance_rounded, size: 120, color: Colors.white),
+            ),
             const SizedBox(height: 24),
             Text(
               'SAHAYAK AI',
               style: GoogleFonts.plusJakartaSans(
-                fontSize: 32,
+                fontSize: 36,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
                 letterSpacing: 4,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             const Text(
               'Empowering Every Citizen',
-              style: TextStyle(color: Colors.white70, fontSize: 16),
+              style: TextStyle(color: Colors.white70, fontSize: 18),
             ),
-            const SizedBox(height: 48),
+            const SizedBox(height: 60),
             const CircularProgressIndicator(color: Color(0xFFFF9933)),
           ],
         ),
@@ -227,41 +242,52 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(32.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const SizedBox(height: 20),
+              Center(
+                child: Hero(
+                  tag: 'app_logo',
+                  child: Icon(Icons.account_balance_rounded, size: 80, color: Theme.of(context).colorScheme.primary),
+                ),
+              ),
               const SizedBox(height: 40),
               const Text(
                 'Welcome to\nNational Digital Sahayak',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, height: 1.2),
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, height: 1.2),
               ),
               const SizedBox(height: 12),
-              const Text('Enter your mobile number to get started', style: TextStyle(color: Colors.black54)),
-              const SizedBox(height: 40),
+              const Text('Enter your mobile number to securely access government services.', style: TextStyle(color: Colors.black54, fontSize: 16)),
+              const SizedBox(height: 48),
               TextField(
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                 decoration: InputDecoration(
                   labelText: 'Mobile Number',
                   prefixIcon: const Icon(Icons.phone_android),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                   prefixText: '+91 ',
                 ),
               ),
               if (_otpSent) ...[
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
                 TextField(
                   keyboardType: TextInputType.number,
+                  style: const TextStyle(fontSize: 18, letterSpacing: 8, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
                   decoration: InputDecoration(
                     labelText: '6-Digit OTP',
+                    hintText: '......',
                     prefixIcon: const Icon(Icons.lock_outline),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                   ),
                 ),
               ],
-              const Spacer(),
+              const SizedBox(height: 40),
               ElevatedButton(
                 onPressed: () {
                   if (!_otpSent) {
@@ -271,9 +297,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     context.go('/consent');
                   }
                 },
-                child: Text(_otpSent ? 'Verify & Login' : 'Send OTP'),
+                child: Text(_otpSent ? 'Verify & Continue' : 'Get OTP', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
+              Center(
+                child: TextButton(
+                  onPressed: () {},
+                  child: const Text('Login with DigiLocker', style: TextStyle(color: Color(0xFF06038D), fontWeight: FontWeight.bold)),
+                ),
+              ),
             ],
           ),
         ),
@@ -296,7 +328,7 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Privacy Consent')),
+      appBar: AppBar(title: const Text('Privacy & Security')),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -304,32 +336,45 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
             const SizedBox(height: 20),
             _buildConsentCard(
               Icons.privacy_tip_outlined,
-              'Data Protection',
-              'Your data is processed in compliance with DPDP Act 2023. We only use information to match you with eligible schemes.',
+              'Digital Citizen Agreement',
+              'In compliance with DPDP Act 2023, your personal data (Age, Income, Occupation) is used solely to determine eligibility for government benefits.',
             ),
             const SizedBox(height: 16),
             _buildConsentCard(
-              Icons.notifications_active_outlined,
-              'Stay Updated',
-              'Allow us to notify you when new government benefits matching your profile become available.',
+              Icons.verified_user_outlined,
+              'Secure Processing',
+              'All information is encrypted and stored in government-authorized servers. You can withdraw consent at any time.',
             ),
             const Spacer(),
-            SwitchListTile(
-              title: const Text('I agree to data processing'),
-              value: _dataProcessing,
-              onChanged: (v) => setState(() => _dataProcessing = v),
-              activeColor: const Color(0xFF06038D),
-            ),
-            SwitchListTile(
-              title: const Text('I want to receive notifications'),
-              value: _schemeNotifications,
-              onChanged: (v) => setState(() => _schemeNotifications = v),
-              activeColor: const Color(0xFF06038D),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+              ),
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    title: const Text('I agree to data processing', style: TextStyle(fontWeight: FontWeight.bold)),
+                    value: _dataProcessing,
+                    onChanged: (v) => setState(() => _dataProcessing = v),
+                    activeColor: const Color(0xFF06038D),
+                  ),
+                  const Divider(),
+                  SwitchListTile(
+                    title: const Text('Enable scheme notifications', style: TextStyle(fontWeight: FontWeight.bold)),
+                    value: _schemeNotifications,
+                    onChanged: (v) => setState(() => _schemeNotifications = v),
+                    activeColor: const Color(0xFF06038D),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: _dataProcessing ? () => context.go('/') : null,
-              child: const Text('Enter Sahayak Hub'),
+              child: const Text('Proceed to Dashboard', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             ),
             const SizedBox(height: 20),
           ],
@@ -351,7 +396,7 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: 32, color: const Color(0xFFFF9933)),
+            Icon(icon, size: 36, color: const Color(0xFFFF9933)),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -359,7 +404,7 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
                 children: [
                   Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                   const SizedBox(height: 8),
-                  Text(desc, style: const TextStyle(color: Colors.black54, fontSize: 14)),
+                  Text(desc, style: const TextStyle(color: Colors.black54, fontSize: 14, height: 1.4)),
                 ],
               ),
             ),
@@ -459,7 +504,7 @@ class VoiceHubScreen extends ConsumerWidget {
               const SizedBox(height: 40),
               const Align(
                 alignment: Alignment.centerLeft,
-                child: Text('Suggested Schemes', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                child: Text('Suggested Schemes', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
               ),
               const SizedBox(height: 16),
               _buildSuggestedSchemes(context),
@@ -497,40 +542,40 @@ class VoiceHubScreen extends ConsumerWidget {
           onLongPressStart: (_) => ref.read(voiceStateProvider.notifier).state = VoiceState.listening,
           onLongPressEnd: (_) => ref.read(voiceSessionProvider.notifier).submitVoice('mock_url'),
           child: TweenAnimationBuilder<double>(
-            tween: Tween(begin: 1.0, end: state == VoiceState.listening ? 1.2 : 1.0),
+            tween: Tween(begin: 1.0, end: state == VoiceState.listening ? 1.25 : 1.0),
             duration: const Duration(milliseconds: 300),
             builder: (context, value, child) {
               return Transform.scale(
                 scale: value,
                 child: Container(
-                  height: 120,
-                  width: 120,
+                  height: 140,
+                  width: 140,
                   decoration: BoxDecoration(
                     color: color,
                     shape: BoxShape.circle,
                     boxShadow: [
-                      BoxShadow(color: color.withOpacity(0.3), blurRadius: 20, spreadRadius: 10),
+                      BoxShadow(color: color.withOpacity(0.4), blurRadius: 30, spreadRadius: 15),
                     ],
                   ),
-                  child: const Icon(Icons.mic_rounded, size: 60, color: Colors.white),
+                  child: const Icon(Icons.mic_rounded, size: 70, color: Colors.white),
                 ),
               );
             },
           ),
         ),
-        const SizedBox(height: 16),
-        Text(label, style: TextStyle(fontWeight: FontWeight.bold, color: color)),
+        const SizedBox(height: 24),
+        Text(label, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
       ],
     );
   }
 
   Widget _buildResponseCard(BuildContext context, TurnResponse res) {
     return Card(
-      elevation: 4,
+      elevation: 8,
       shadowColor: Colors.black12,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -538,23 +583,34 @@ class VoiceHubScreen extends ConsumerWidget {
               children: [
                 const CircleAvatar(backgroundColor: Color(0xFF06038D), child: Icon(Icons.auto_awesome, color: Colors.white, size: 20)),
                 const SizedBox(width: 12),
-                const Text('Sahayak AI', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text('Sahayak AI', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 const Spacer(),
                 IconButton(onPressed: () {}, icon: const Icon(Icons.volume_up_rounded, color: Color(0xFFFF9933))),
               ],
             ),
-            const Divider(),
-            MarkdownBody(data: res.text),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12.0),
+              child: Divider(),
+            ),
+            MarkdownBody(
+              data: res.text,
+              styleSheet: MarkdownStyleSheet(
+                p: const TextStyle(fontSize: 16, height: 1.5),
+              ),
+            ),
             if (res.actionItems != null) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               Wrap(
-                spacing: 8,
+                spacing: 12,
+                runSpacing: 12,
                 children: res.actionItems!.map((item) {
                   return ActionChip(
                     label: Text(item.label),
                     onPressed: () {},
-                    backgroundColor: const Color(0xFF06038D).withOpacity(0.05),
-                    labelStyle: const TextStyle(color: Color(0xFF06038D), fontSize: 12),
+                    backgroundColor: const Color(0xFF06038D).withOpacity(0.08),
+                    side: BorderSide.none,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    labelStyle: const TextStyle(color: Color(0xFF06038D), fontSize: 13, fontWeight: FontWeight.w600),
                   );
                 }).toList(),
               ),
@@ -576,31 +632,225 @@ class VoiceHubScreen extends ConsumerWidget {
 
   Widget _buildSchemeTile(BuildContext context, String name, String cat, String status, Color statusColor) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 16),
       elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Colors.grey.shade100)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: Colors.grey.shade200)),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(cat),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        subtitle: Text(cat, style: const TextStyle(fontSize: 14)),
         trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
-          child: Text(status, style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 12)),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(24)),
+          child: Text(status, style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 13)),
         ),
       ),
     );
   }
 }
 
-class ChatHistoryScreen extends ConsumerWidget {
+class ChatHistoryScreen extends ConsumerStatefulWidget {
   const ChatHistoryScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ChatHistoryScreen> createState() => _ChatHistoryScreenState();
+}
+
+class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
+  final ScrollController _scrollController = ScrollController();
+  final TextEditingController _textController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+  }
+
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final messages = ref.watch(chatProvider);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Smart Chat')),
-      body: const Center(child: Text('Chat History coming soon...')),
+      backgroundColor: const Color(0xFFF5F7FA),
+      appBar: AppBar(
+        title: const Text('Sahayak Conversations', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              controller: _scrollController,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              itemCount: messages.length,
+              itemExtent: null, // Dynamic height for markdown
+              itemBuilder: (context, index) {
+                final message = messages[index];
+                return _buildMessageBubble(message);
+              },
+            ),
+          ),
+          _buildInputArea(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMessageBubble(ChatMessage message) {
+    final isBot = message.sender == MessageSender.bot;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        mainAxisAlignment: isBot ? MainAxisAlignment.start : MainAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (isBot) ...[
+            const CircleAvatar(
+              radius: 24,
+              backgroundColor: Color(0xFF06038D),
+              child: Icon(Icons.smart_toy_rounded, color: Colors.white, size: 28),
+            ),
+            const SizedBox(width: 12),
+          ],
+          Flexible(
+            child: Column(
+              crossAxisAlignment: isBot ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: isBot ? Colors.white : const Color(0xFFFF9933),
+                    borderRadius: BorderRadius.circular(24).copyWith(
+                      bottomLeft: isBot ? const Radius.circular(0) : const Radius.circular(24),
+                      bottomRight: isBot ? const Radius.circular(24) : const Radius.circular(0),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.06),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      )
+                    ],
+                  ),
+                  child: message.type == MessageType.voice
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.play_circle_fill, color: Colors.white, size: 32),
+                            const SizedBox(width: 12),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Voice Message', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                Text(message.content, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                              ],
+                            ),
+                          ],
+                        )
+                      : MarkdownBody(
+                          data: message.content,
+                          styleSheet: MarkdownStyleSheet(
+                            p: TextStyle(
+                              color: isBot ? Colors.black87 : Colors.white,
+                              fontSize: 16,
+                              height: 1.5,
+                              fontWeight: isBot ? FontWeight.normal : FontWeight.w500,
+                            ),
+                            h1: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                          ),
+                        ),
+                ),
+                if (message.actionItems != null) ...[
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: message.actionItems!.map((item) {
+                      return ActionChip(
+                        label: Text(item),
+                        onPressed: () {},
+                        backgroundColor: Colors.white,
+                        side: const BorderSide(color: Color(0xFF06038D), width: 1.5),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        labelStyle: const TextStyle(color: Color(0xFF06038D), fontWeight: FontWeight.bold, fontSize: 12),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (!isBot) ...[
+            const SizedBox(width: 12),
+            const CircleAvatar(
+              radius: 24,
+              backgroundColor: Color(0xFFFF9933),
+              child: Icon(Icons.person_rounded, color: Colors.white, size: 28),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputArea() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, -5))],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5F7FA),
+                borderRadius: BorderRadius.circular(32),
+              ),
+              child: TextField(
+                controller: _textController,
+                decoration: const InputDecoration(
+                  hintText: 'Ask your Sahayak...',
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                ),
+                onSubmitted: (val) {
+                  if (val.isNotEmpty) {
+                    ref.read(chatProvider.notifier).addTextMessage(val, MessageSender.user);
+                    _textController.clear();
+                    Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
+                  }
+                },
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            height: 56,
+            width: 56,
+            decoration: const BoxDecoration(
+              color: Color(0xFF06038D),
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.mic_rounded, color: Colors.white, size: 32),
+              onPressed: () {},
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
