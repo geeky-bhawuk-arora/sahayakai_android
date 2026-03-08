@@ -1,8 +1,3 @@
-import 'package:json_annotation/json_annotation.dart';
-
-part 'user_profile.g.dart';
-
-@JsonSerializable()
 class UserProfile {
   final String id;
   final String? name;
@@ -26,6 +21,29 @@ class UserProfile {
     this.consents = const {},
   });
 
-  factory UserProfile.fromJson(Map<String, dynamic> json) => _$UserProfileFromJson(json);
-  Map<String, dynamic> toJson() => _$UserProfileToJson(this);
+  factory UserProfile.fromJson(Map<String, dynamic> json) {
+    return UserProfile(
+      id: json['id'] as String,
+      name: json['name'] as String?,
+      age: json['age'] as int?,
+      gender: json['gender'] as String?,
+      occupation: json['occupation'] as String?,
+      annualIncome: (json['annualIncome'] as num?)?.toDouble(),
+      hasLand: json['hasLand'] as bool?,
+      caste: json['caste'] as String?,
+      consents: Map<String, bool>.from(json['consents'] as Map? ?? {}),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'age': age,
+    'gender': gender,
+    'occupation': occupation,
+    'annualIncome': annualIncome,
+    'hasLand': hasLand,
+    'caste': caste,
+    'consents': consents,
+  };
 }

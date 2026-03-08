@@ -1,8 +1,3 @@
-import 'package:json_annotation/json_annotation.dart';
-
-part 'turn_response.g.dart';
-
-@JsonSerializable()
 class TurnResponse {
   final String text;
   final String? audioUrl;
@@ -14,14 +9,26 @@ class TurnResponse {
     this.actionItems,
   });
 
-  factory TurnResponse.fromJson(Map<String, dynamic> json) => _$TurnResponseFromJson(json);
-  Map<String, dynamic> toJson() => _$TurnResponseToJson(this);
+  factory TurnResponse.fromJson(Map<String, dynamic> json) {
+    return TurnResponse(
+      text: json['text'] as String,
+      audioUrl: json['audioUrl'] as String?,
+      actionItems: (json['actionItems'] as List?)
+          ?.map((e) => ActionItem.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'text': text,
+    'audioUrl': audioUrl,
+    'actionItems': actionItems?.map((e) => e.toJson()).toList(),
+  };
 }
 
-@JsonSerializable()
 class ActionItem {
   final String label;
-  final String type; // e.g., 'link', 'navigate', 'form'
+  final String type;
   final String? payload;
 
   ActionItem({
@@ -30,6 +37,17 @@ class ActionItem {
     this.payload,
   });
 
-  factory ActionItem.fromJson(Map<String, dynamic> json) => _$ActionItemFromJson(json);
-  Map<String, dynamic> toJson() => _$ActionItemToJson(this);
+  factory ActionItem.fromJson(Map<String, dynamic> json) {
+    return ActionItem(
+      label: json['label'] as String,
+      type: json['type'] as String,
+      payload: json['payload'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'label': label,
+    'type': type,
+    'payload': payload,
+  };
 }

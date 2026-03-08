@@ -26,6 +26,11 @@ class ApiService {
     final response = await _dio.post('/voice/turn', data: {'voice_url': voiceUrl});
     return TurnResponse.fromJson(response.data);
   }
+
+  Future<Map<String, dynamic>> checkEligibility(String schemeId) async {
+    final response = await _dio.get('/schemes/$schemeId/eligibility');
+    return response.data;
+  }
 }
 
 class MockInterceptor extends Interceptor {
@@ -72,12 +77,23 @@ class MockInterceptor extends Interceptor {
       handler.resolve(Response(
         requestOptions: options,
         data: {
-          'text': 'आप पीएम-किसान योजना के लिए पात्र हैं। (You are eligible for PM-KISAN).',
+          'text': '# PM-KISAN Eligibility\n\nYou are eligible for **PM-KISAN**. \n\n### Benefits:\n- ₹2,000 every 4 months\n- Direct Bank Transfer\n\n### Required Actions:\nPlease ensure your Aadhar is linked to your bank account.',
           'audioUrl': 'https://example.com/mock-audio.mp3',
           'actionItems': [
-            {'label': 'आधार कार्ड लिंक करें', 'type': 'navigate', 'payload': 'link-aadhar'},
-            {'label': 'बैंक विवरण अपडेट करें', 'type': 'form', 'payload': 'update-bank'},
+            {'label': 'Link Aadhar', 'type': 'navigate', 'payload': 'link-aadhar'},
+            {'label': 'View Documents', 'type': 'form', 'payload': 'view-docs'},
           ],
+        },
+        statusCode: 200,
+      ));
+    } else if (options.path.contains('/eligibility')) {
+      handler.resolve(Response(
+        requestOptions: options,
+        data: {
+          'eligible': true,
+          'confidence_score': 0.95,
+          'missing_documents': ['Land Possession Certificate'],
+          'message': 'You meet most criteria, but need to upload one document.'
         },
         statusCode: 200,
       ));
